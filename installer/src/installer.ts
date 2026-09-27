@@ -385,13 +385,28 @@ const app = {
       const compressed = /\.gz($|\?)/.test(manifest.payloadUrl)
         || res.headers.get('content-type') === 'application/gzip';
 
-      let stream: ReadableStream<Uint8Array> = res.body!.pipeThrough(counter);
       if (compressed) {
         appendLog('Downloading compressed; unpacking as it arrives.');
-        stream = stream.pipeThrough(new DecompressionStream('gzip'));
       }
 
-      const blob = await new Response(stream).blob();
+      // Built as one expression rather than reassigning a typed variable.
+      // DecompressionStream's writable side is typed over ArrayBufferLike
+      // while a ReadableStream<Uint8Array> defaults to ArrayBuffer, and an
+      // explicit annotation makes the two collide on newer TypeScript.
+      // Inference handles it; the annotation was the problem.
+      // The cast is a lib.dom wrinkle, not a claim about the data.
+      // DecompressionStream.writable is declared WritableStream<BufferSource>,
+      // which is wider than Uint8Array, so pipeThrough on a
+      // ReadableStream<Uint8Array> will not accept it. A gzip stream does emit
+      // Uint8Array; the declaration is simply loose. Narrowing it here is the
+      // accepted idiom and it is the only cast in this file.
+      const gunzip = new DecompressionStream('gzip') as unknown as
+        TransformStream<Uint8Array, Uint8Array>;
+
+      const counted = res.body!.pipeThrough(counter);
+      const blob = await new Response(
+        compressed ? counted.pipeThrough(gunzip) : counted
+      ).blob();
       appendLog(
         compressed
           ? `Download complete (${(received / 1024 / 1024).toFixed(1)} MB `

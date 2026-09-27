@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev":   "vite",
+    "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
@@ -12,7 +12,7 @@
     "android-fastboot": "^1.0.3"
   },
   "devDependencies": {
-    "typescript": "^5.5.4",
+    "typescript": "5.9.2",
     "vite": "^5.4.8"
   }
 }
