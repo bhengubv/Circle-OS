@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CircleOS Installer</title>
+  <style>
+    /* ── Circle Design System — minimal inline tokens ───────────────────── */
+    :root {
+      --c-bg:        #0a0a0f;
+      --c-surface:   #14141e;
+      --c-border:    #2a2a3a;
+      --c-primary:   #6c47ff;
+      --c-primary-h: #8b6dff;
+      --c-text:      #e8e8f0;
+      --c-muted:     #888899;
+      --c-success:   #22c55e;
+      --c-warn:      #f59e0b;
+      --c-error:     #ef4444;
+      --radius:      12px;
+      --font:        'Inter', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────── */
+    header {
+      width: 100%;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--c-border);
+    }
+    header .logo {
+      width: 36px; height: 36px;
+      background: var(--c-primary);
+      border-radius: 50%;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+
+    /* ── Tab bar ─────────────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 24px 40px 0;
+      width: 100%;
+      max-width: 720px;
+    }
+    .tab {
+      padding: 10px 22px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--c-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      transition: all .2s;
+    }
+    .tab.active {
+      color: var(--c-text);
+      background: var(--c-surface);
+      border-color: var(--c-border);
+      border-bottom-color: var(--c-surface);
+    }
+
+    /* ── Main card ───────────────────────────────────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 720px;
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      padding: 40px;
+      margin: 0 40px 40px;
+    }
+
+    /* ── Step indicator ──────────────────────────────────────────────────── */
+    .step-bar {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 36px;
+    }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--c-border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex-shrink: 0;
+      transition: background .3s;
+    }
+    .step-dot.active  { background: var(--c-primary); color: #fff; }
+    .step-dot.done    { background: var(--c-success);  color: #fff; }
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--c-border);
+      transition: background .3s;
+    }
+    .step-line.done { background: var(--c-success); }
+
+    /* ── Step content ────────────────────────────────────────────────────── */
+    .step-panel { display: none; }
+    .step-panel.visible { display: block; }
+
+    h2 { font-size: 1.3rem; margin-bottom: 8px; }
+    p  { color: var(--c-muted); line-height: 1.6; margin-bottom: 16px; }
+    .warn-box {
+      background: rgba(245,158,11,.08);
+      border: 1px solid rgba(245,158,11,.3);
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: var(--c-warn);
+      font-size: 0.875rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background: rgba(108,71,255,.08);
+      border: 1px solid rgba(108,71,255,.3);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: var(--c-primary);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--c-primary-h); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--c-muted);
+      border: 1px solid var(--c-border);
+    }
+    .btn-ghost:hover { color: var(--c-text); border-color: var(--c-text); }
+
+    /* ── Progress bar ────────────────────────────────────────────────────── */
+    .progress-wrap {
+      background: var(--c-border);
+      border-radius: 4px;
+      overflow: hidden;
+      height: 6px;
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--c-primary);
+      transition: width .4s ease;
+      width: 0%;
+    }
+    .progress-label { font-size: 0.8rem; color: var(--c-muted); }
+
+    /* ── Device info chip ────────────────────────────────────────────────── */
+    .device-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(108,71,255,.1);
+      border: 1px solid rgba(108,71,255,.3);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    /* ── Status log ──────────────────────────────────────────────────────── */
+    #log {
+      background: #080810;
+      border: 1px solid var(--c-border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #8888aa;
+      height: 140px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    #log .log-ok   { color: var(--c-success); }
+    #log .log-warn { color: var(--c-warn); }
+    #log .log-err  { color: var(--c-error); }
+
+    .row { display: flex; gap: 12px; align-items: center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo"></div>
+  <h1>CircleOS Installer</h1>
+</header>
+
+<!-- Tab bar -->
+<div class="tabs">
+  <button class="tab active" id="tab-install"  onclick="switchTab('install')">Install CircleOS</button>
+  <button class="tab"        id="tab-revert"   onclick="switchTab('revert')">Restore Previous OS</button>
+</div>
+
+<!-- ── INSTALL PANEL ──────────────────────────────────────────────────────── -->
+<main id="panel-install">
+
+  <!-- Step progress bar (7 steps) -->
+  <div class="step-bar" id="step-bar">
+    <!-- populated by steps.ts -->
+  </div>
+
+  <!-- Step panels (shown/hidden by steps.ts) -->
+
+  <div class="step-panel visible" id="step-0">
+    <h2>Welcome</h2>
+    <p>This installer will guide you through flashing CircleOS to slot B of your device. Your existing Android OS remains untouched on slot A and can be restored at any time.</p>
+    <div class="warn-box">
+      ⚠️ Unlocking the bootloader <strong>will wipe all data</strong> from your device. Back up everything before continuing.
+    </div>
+    <div class="info-box">
+      Requirements: Desktop Chrome or Edge · USB cable · Pixel 6 or Redmi Note 12
+    </div>
+    <button class="btn btn-primary" id="btn-start" onclick="app.start()">Get Started</button>
+  </div>
+
+  <div class="step-panel" id="step-1">
+    <h2>Connect Device</h2>
+    <p>Enable USB debugging on your device (<strong>Settings → Developer options → USB debugging</strong>), connect via USB, then click Connect.</p>
+    <div id="device-info" style="display:none">
+      <div class="device-chip" id="device-chip">●&nbsp;<span id="device-name">—</span></div>
+    </div>
+    <button class="btn btn-primary" id="btn-connect" onclick="app.connectDevice()">Connect via USB</button>
+  </div>
+
+  <div class="step-panel" id="step-2">
+    <h2>Fetch Latest Build</h2>
+    <p>Checking <code>ota.circleos.co.za</code> for the latest alpha build for your device…</p>
+    <div id="manifest-info" style="display:none">
+      <div class="device-chip">CircleOS <span id="build-version">—</span> · <span id="build-date">—</span></div>
+    </div>
+    <button class="btn btn-primary" id="btn-fetch" onclick="app.fetchManifest()" disabled>Fetch Build Info</button>
+  </div>
+
+  <div class="step-panel" id="step-3">
+    <h2>Unlock Bootloader</h2>
+    <p>Your device bootloader must be unlocked to flash a custom OS. This step wipes all data.</p>
+    <div class="warn-box">
+      ⚠️ All data on the device will be erased. This cannot be undone.
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" id="btn-unlock" onclick="app.unlockBootloader()">Unlock &amp; Wipe</button>
+      <button class="btn btn-ghost"   onclick="app.skipIfAlreadyUnlocked()">Already unlocked</button>
+    </div>
+  </div>
+
+  <div class="step-panel" id="step-4">
+    <h2>Flash CircleOS</h2>
+    <p>Streaming <code>payload.bin</code> from the CDN and flashing to slot B. Do not disconnect the USB cable.</p>
+    <div class="progress-wrap"><div class="progress-bar" id="flash-progress"></div></div>
+    <p class="progress-label" id="flash-label">Waiting…</p>
+    <div id="log" aria-live="polite"></div>
+    <button class="btn btn-primary" id="btn-flash" onclick="app.flashDevice()">Start Flash</button>
+  </div>
+
+  <div class="step-panel" id="step-5">
+    <h2>Set Active Slot</h2>
+    <p>Setting the active boot slot to B (CircleOS) and rebooting into your new OS.</p>
+    <button class="btn btn-primary" id="btn-setactive" onclick="app.setActiveAndReboot()">Set Slot B &amp; Reboot</button>
+  </div>
+
+  <div class="step-panel" id="step-6">
+    <h2>Done!</h2>
+    <p>CircleOS is booting on your device. Complete the setup wizard on-device.</p>
+    <p>To revert at any time: open CircleSettings → <em>Revert to previous OS</em>, or use the <strong>Restore Previous OS</strong> tab above.</p>
+    <button class="btn btn-ghost" onclick="location.reload()">Install on another device</button>
+  </div>
+
+</main>
+
+<!-- ── REVERT PANEL ───────────────────────────────────────────────────────── -->
+<main id="panel-revert" style="display:none">
+  <h2>Restore Previous OS</h2>
+  <p>This will switch your device back to slot A (your original Android OS) and reboot. No data is lost — your stock Android picks up exactly where you left it.</p>
+  <div class="info-box">
+    Connect your CircleOS device via USB in fastboot mode (hold <strong>Power + Volume Down</strong> at boot).
+  </div>
+  <div id="revert-device-info" style="display:none">
+    <div class="device-chip">●&nbsp;<span id="revert-device-name">—</span></div>
+  </div>
+  <div id="log-revert" class="log" style="
+    background:#080810; border:1px solid var(--c-border); border-radius:8px;
+    padding:14px; font-family:monospace; font-size:.8rem; color:#8888aa;
+    height:100px; overflow-y:auto; margin-bottom:20px; display:none;
+  " aria-live="polite"></div>
+  <div class="row">
+    <button class="btn btn-primary" id="btn-revert-connect" onclick="revert.connect()">Connect Device</button>
+    <button class="btn btn-primary" id="btn-revert-go" onclick="revert.restoreSlotA()" style="display:none">Restore Slot A &amp; Reboot</button>
+  </div>
+</main>
+
+<script type="module" src="/src/installer.ts"></script>
+<script>
+  function switchTab(name) {
+    document.getElementById('tab-install').classList.toggle('active', name === 'install');
+    document.getElementById('tab-revert').classList.toggle('active',  name === 'revert');
+    document.getElementById('panel-install').style.display = name === 'install' ? '' : 'none';
+    document.getElementById('panel-revert').style.display  = name === 'revert'  ? '' : 'none';
+  }
+</script>
+</body>
+</html>

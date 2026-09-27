@@ -1,0 +1,3 @@
+name = "circleos-installer"
+pages_build_output_dir = "dist"
+# SPA catch-all is handled by public/_redirects (copied to dist/ by Vite)

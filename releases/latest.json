@@ -1,5 +1,5 @@
 {
   "hasUpdate": false,
   "release": null,
-  "_comment": "Written by tools/publish-release.sh in the CircleOS repo. Served raw from GitHub, which sends Access-Control-Allow-Origin: * so the browser installer can read it with no server. hasUpdate false means nothing is published yet, and the installer says so rather than failing."
+  "_comment": "One manifest, two clients. The browser installer reads imageUrl (a raw system image it flashes over fastboot); CircleUpdateService on the phone reads payloadUrl (an A/B payload it hands to update_engine). They are different artifacts for different mechanisms and both belong here, so neither client has to know about the other. Written by tools/publish-release.sh in the CircleOS repo. Served raw from GitHub, which sends Access-Control-Allow-Origin: * - the release assets do NOT, which is why imageUrl points at R2."
 }

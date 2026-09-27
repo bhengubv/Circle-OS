@@ -1,0 +1,54 @@
+# Build the browser installer and publish it to GitHub Pages.
+#
+# The installer has to be reachable by a person with a phone and a cable. It
+# was TypeScript in a repository - written, type-checked, and openable by
+# nobody. This is the step that was missing.
+name: installer
+
+on:
+  push:
+    branches: [main]
+    paths: ['installer/**', '.github/workflows/installer.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. Never cancel one in flight: a half-published installer
+# is worse than an old one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install
+        working-directory: installer
+        run: npm install
+      # tsc runs before vite build via the "build" script. A type error stops
+      # the deploy rather than shipping a page that fails in somebody's browser
+      # while it is erasing their phone.
+      - name: Build
+        working-directory: installer
+        run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: installer/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
