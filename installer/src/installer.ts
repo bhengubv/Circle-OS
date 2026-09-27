@@ -365,8 +365,39 @@ const app = {
         },
       });
 
-      const blob = await new Response(res.body!.pipeThrough(counter)).blob();
-      appendLog(`Download complete (${(received / 1024 / 1024).toFixed(1)} MB)`, 'log-ok');
+      // DECOMPRESS, BECAUSE WHAT IS PUBLISHED IS COMPRESSED.
+      //
+      // The release is system.img.gz - 2,068 MB raw, 1,010 MB gzipped,
+      // measured. fastboot needs the raw image. Without this the installer
+      // would write a gzip file into the system partition: the CrAU check
+      // below would not catch it, because a gzip starts 1f 8b and not "CrAU",
+      // and the phone would simply not boot.
+      //
+      // DecompressionStream is the browser's own, so the 2 GB is unpacked in
+      // the stream and handed to Response.blob() - storage the browser
+      // manages, not the JS heap. That is also why the release is gzip and not
+      // xz despite xz being 170 MB smaller: there is no XzDecompressionStream,
+      // and a WASM decoder would put the whole 2 GB back in memory.
+      //
+      // Progress counts the bytes coming off the network, which is what
+      // content-length describes. Counting decompressed bytes against a
+      // compressed total would show a bar running to 200%.
+      const compressed = /\.gz($|\?)/.test(manifest.payloadUrl)
+        || res.headers.get('content-type') === 'application/gzip';
+
+      let stream: ReadableStream<Uint8Array> = res.body!.pipeThrough(counter);
+      if (compressed) {
+        appendLog('Downloading compressed; unpacking as it arrives.');
+        stream = stream.pipeThrough(new DecompressionStream('gzip'));
+      }
+
+      const blob = await new Response(stream).blob();
+      appendLog(
+        compressed
+          ? `Download complete (${(received / 1024 / 1024).toFixed(1)} MB `
+            + `compressed, ${(blob.size / 1024 / 1024).toFixed(1)} MB unpacked)`
+          : `Download complete (${(received / 1024 / 1024).toFixed(1)} MB)`,
+        'log-ok');
 
       // WHAT IS IN THIS BLOB DECIDES WHETHER IT CAN BE FLASHED AT ALL.
       //
@@ -382,6 +413,18 @@ const app = {
       // costs one read to tell them apart - and refusing loudly is the only
       // honest option, because the browser cannot unpack one.
       const magic = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+
+      // Still gzipped means the decompression did not happen - a .gz served
+      // without the extension in the URL and without the content type. Better
+      // to stop than to write an archive where a filesystem belongs.
+      if (magic[0] === 0x1f && magic[1] === 0x8b) {
+        throw new Error(
+          'The downloaded file is still compressed. It was not recognised as ' +
+          'a gzip, so it was not unpacked, and flashing it would leave the ' +
+          'phone unable to boot. Nothing was written to your phone.'
+        );
+      }
+
       if (String.fromCharCode(...magic) === 'CrAU') {
         throw new Error(
           'The server sent an A/B OTA payload (payload.bin), which this ' +
