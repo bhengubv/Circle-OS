@@ -1,0 +1,5 @@
+{
+  "hasUpdate": false,
+  "release": null,
+  "_comment": "Written by tools/publish-release.sh in the CircleOS repo. Served raw from GitHub, which sends Access-Control-Allow-Origin: * so the browser installer can read it with no server. hasUpdate false means nothing is published yet, and the installer says so rather than failing."
+}
