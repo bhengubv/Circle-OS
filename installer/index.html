@@ -234,15 +234,45 @@
   <!-- Step panels (shown/hidden by steps.ts) -->
 
   <div class="step-panel visible" id="step-0">
-    <h2>Welcome</h2>
-    <p>This installer will guide you through flashing CircleOS to slot B of your device. Your existing Android OS remains untouched on slot A and can be restored at any time.</p>
+    <h2>What do you want to do?</h2>
+
+    <div class="info-box" id="mode-flash-box">
+      <strong>Install Circle OS</strong><br>
+      Circle OS becomes the phone you use. Your current Android stays in the
+      other system slot as a fallback, but you would not normally go back to it.
+      <br><br>
+      <button class="btn btn-primary" onclick="app.chooseMode('flash')">Install Circle OS</button>
+    </div>
+
+    <div class="info-box" id="mode-dual-box">
+      <strong>Keep both</strong><br>
+      Circle OS goes into the spare slot and your current Android stays in the
+      other one. Both stay installed and you switch between them whenever you
+      like, from the Restore tab above.
+      <br><br>
+      <button class="btn btn-primary" onclick="app.chooseMode('dual')">Keep both</button>
+    </div>
+
+    <div class="info-box" id="mode-update-box">
+      <strong>Update Circle OS</strong><br>
+      For a phone already running Circle OS. Installs a newer build into the
+      other slot. <strong>Nothing is erased</strong> and the bootloader is left
+      as it is.
+      <br><br>
+      <button class="btn btn-primary" onclick="app.chooseMode('update')">Update</button>
+    </div>
+
     <div class="warn-box">
-      ⚠️ Unlocking the bootloader <strong>will wipe all data</strong> from your device. Back up everything before continuing.
+      Installing or keeping both requires unlocking the bootloader, and
+      <strong>unlocking erases everything on the phone</strong>. That is
+      Android's behaviour and it cannot be skipped. Updating does not unlock and
+      does not erase.
     </div>
+
     <div class="info-box">
-      Requirements: Desktop Chrome or Edge · USB cable · Pixel 6 or Redmi Note 12
+      Desktop Chrome or Edge, a USB cable, and a phone with two system slots and
+      an unlockable bootloader.
     </div>
-    <button class="btn btn-primary" id="btn-start" onclick="app.start()">Get Started</button>
   </div>
 
   <div class="step-panel" id="step-1">
@@ -287,7 +317,7 @@
   <div class="step-panel" id="step-5">
     <h2>Set Active Slot</h2>
     <p>Setting the active boot slot to B (CircleOS) and rebooting into your new OS.</p>
-    <button class="btn btn-primary" id="btn-setactive" onclick="app.setActiveAndReboot()">Set Slot B &amp; Reboot</button>
+    <button class="btn btn-primary" id="btn-setactive" onclick="app.setActiveAndReboot()">Start Circle OS</button>
   </div>
 
   <div class="step-panel" id="step-6">
@@ -316,7 +346,7 @@
   " aria-live="polite"></div>
   <div class="row">
     <button class="btn btn-primary" id="btn-revert-connect" onclick="revert.connect()">Connect Device</button>
-    <button class="btn btn-primary" id="btn-revert-go" onclick="revert.restoreSlotA()" style="display:none">Restore Slot A &amp; Reboot</button>
+    <button class="btn btn-primary" id="btn-revert-go" onclick="revert.rollback()" style="display:none">Switch &amp; Restart</button>
   </div>
 </main>
 

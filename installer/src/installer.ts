@@ -36,6 +36,21 @@ import {
 // A phone is now judged on what it can do - see checkDevice() in api.ts. This
 // table only turns a codename into something readable, and a phone missing
 // from it is shown its codename rather than turned away.
+/**
+ * The three things a person can be here to do.
+ *
+ * They differ in intent and in whether the phone gets erased. They do not
+ * differ in where the image is written: on an A/B phone that is always the
+ * slot that is not running.
+ */
+export type Mode = 'flash' | 'dual' | 'update';
+
+const MODE_NAMES: Record<Mode, string> = {
+  flash:  'Installing Circle OS as the main system.',
+  dual:   'Installing Circle OS alongside your current system.',
+  update: 'Updating Circle OS. Nothing will be erased.',
+};
+
 const DEVICE_NAMES: Record<string, string> = {
   oriole: 'Pixel 6',
   lynx:   'Pixel 7a',
@@ -103,6 +118,8 @@ let manifest: BuildManifest | null = null;
 let deviceFacts: DeviceFacts | null = null;
 /** The slot the image went into. Read from the phone, never assumed. */
 let targetSlot: string | null = null;
+/** Which of the three. Set at step 0; defaults to the cautious reading. */
+let installMode: Mode = 'flash';
 
 // ── Initialise ─────────────────────────────────────────────────────────────────
 initStepBar();
@@ -112,9 +129,31 @@ goToStep(0);
 
 const app = {
 
-  /** Step 0 → Step 1 */
-  start(): void {
+  /**
+   * Step 0: which of the three things is this.
+   *
+   *   flash   Circle OS becomes the phone. Unlock, which erases.
+   *   dual    Both stay installed, switch between them. Also unlocks.
+   *   update  Already running Circle OS. No unlock, nothing erased.
+   *
+   * The mechanical difference is the unlock step and what is said about the
+   * other slot - the write itself is the same in all three, because on an A/B
+   * phone installing to the spare slot IS what all three do. Pretending they
+   * were three different mechanisms would be theatre.
+   *
+   * Update is the one with a real constraint: it must not erase, and unlocking
+   * always erases, so a locked phone cannot be updated. It is told to install
+   * instead rather than being walked into a wipe it did not ask for.
+   */
+  chooseMode(mode: Mode): void {
+    installMode = mode;
+    appendLog(MODE_NAMES[mode]);
     goToStep(1);
+  },
+
+  /** Kept so an older page with a Get Started button still works. */
+  start(): void {
+    app.chooseMode('flash');
   },
 
   /** Step 1: connect over WebUSB and ask the phone what it is. */
@@ -215,6 +254,29 @@ const app = {
       }
 
       appendLog('This phone can take this build.', 'log-ok');
+
+      // UPDATING MUST NOT ERASE, AND UNLOCKING ALWAYS ERASES.
+      //
+      // So a locked phone cannot be updated. Sending it to the unlock step
+      // anyway would walk somebody who asked for an update into a full wipe -
+      // the one outcome they did not ask for.
+      if (installMode === 'update' && deviceFacts.unlocked !== true) {
+        const why = deviceFacts.unlocked === false
+          ? 'This phone’s bootloader is locked.'
+          : 'This phone would not say whether its bootloader is unlocked.';
+        appendLog(why, 'log-err');
+        alert(
+          [
+            why,
+            'Updating cannot unlock it, because unlocking erases everything ' +
+            'and an update should not. If this phone is not running Circle OS ' +
+            'yet, go back and choose Install instead.',
+            'Nothing has been changed.',
+          ].join('\n\n')
+        );
+        setEnabled('btn-fetch', true);
+        return;
+      }
 
       // Already unlocked? Then the erase-everything step is not needed, and
       // offering it anyway would be offering to wipe a phone for no reason.
@@ -363,6 +425,23 @@ const app = {
       appendLog(`Setting active slot to ${targetSlot}…`);
       await fastbootDevice.runCommand(`set_active ${targetSlot}`);
       appendLog(`Slot ${targetSlot} active. Rebooting…`, 'log-ok');
+
+      // What happens next is different in each case, and the person should be
+      // told which one they are in before the screen goes dark.
+      if (installMode === 'dual') {
+        appendLog(
+          'Your previous system is still installed in the other slot. ' +
+          'Switch back any time from the Restore tab - nothing is erased ' +
+          'either way.', 'log-ok');
+      } else if (installMode === 'update') {
+        appendLog(
+          'Your previous Circle OS build is still in the other slot. If this ' +
+          'one misbehaves, switch back from the Restore tab.', 'log-ok');
+      } else {
+        appendLog(
+          'Your previous system is still in the other slot as a fallback.',
+          'log-ok');
+      }
       await fastbootDevice.runCommand('reboot');
       goToStep(6);
     } catch (err) {
