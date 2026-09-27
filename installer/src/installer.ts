@@ -403,7 +403,7 @@ const app = {
       targetSlot = otherSlot(current);
       appendLog(`Running from slot ${current}; installing into slot ${targetSlot}.`);
 
-      await (fastbootDevice as any).flashBlob(`system_${targetSlot}`, blob, (progress: number) => {
+      await fastbootDevice.flashBlob(`system_${targetSlot}`, blob, (progress: number) => {
         const total = 50 + Math.round(progress * 50); // flash = 50–100%
         setFlashProgress(total, `Flashing… ${total}%`);
       });
